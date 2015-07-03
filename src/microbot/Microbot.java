@@ -5,6 +5,7 @@
  */
 package microbot;
 
+import helpers.Methods;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.Properties;
@@ -16,6 +17,9 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Vector;
 
 /**
  *
@@ -32,14 +36,13 @@ public class Microbot {
 
         //TODO Add error checker
         //Add a boolean and check if any exception occured in configuration?
-        
         //Start threads
         Variables.threadController.Start();
     }
 
     /**
      * This function will read the configuration file and set the
-     * <b>Variables</b>.
+     * {@link Variables}.
      */
     private static void readConfiguration() {
         //TODO Exception handle while reading and setting.
@@ -49,9 +52,11 @@ public class Microbot {
         try {
             properties.load(new FileInputStream("config.properties"));
 
-            //Anonymizer
+            //
+            // Anonymizer
+            //
             if (properties.containsKey("Anonymizer")) {
-                Variables.anonymizerNetwork = Variables.Anonymizer.valueOf(properties.getProperty("Anonymizer", "TOR"));
+                Variables.anonymizerNetwork = Variables.Anonymizer.valueOf(properties.getProperty("Anonymizer", Variables.Anonymizer.TOR.name()));
             }
             if (properties.containsKey("AnonymizerProxyType")) {
                 Variables.anonymizerProxyType = Variables.AnonymizerProxy.valueOf(properties.getProperty("AnonymizerProxyType", "SOCKS"));
@@ -63,7 +68,9 @@ public class Microbot {
                 Variables.anonymizerPort = Integer.valueOf(properties.getProperty("AnonymizerPort", "9150"));
             }
 
-            //Web Requests
+            //
+            // Web Requests
+            //
             if (properties.containsKey("threadCount")) {
                 Variables.threadCount = Integer.parseInt(properties.getProperty("threadCount", "5"));
             }
@@ -83,25 +90,39 @@ public class Microbot {
                 Variables.Cookie = properties.getProperty("Cookie", "");
             }
 
-            //Load and Store
+            //
+            // Load and Store
+            //
+            //Load
             if (properties.containsKey("InputFile")) {
                 Variables.inputFile = properties.getProperty("InputFile", "profiles.csv");
             }
             if (properties.containsKey("MainURLColumnName")) {
                 Variables.inputFileLinksColumnName = properties.getProperty("MainURLColumnName", "");
             }
-            if (properties.containsKey("OutputFileName")) {
-                Variables.inputFileOutputFileName = properties.getProperty("OutputFileName", "");
+            if (properties.containsKey("OutputFileColumnName")) {
+                Variables.inputFileOutputFileName = properties.getProperty("OutputFileColumnName", "");
             }
+            //Store
             if (properties.containsKey("OutputDirectory")) {
-                Variables.outputDirector = properties.getProperty("OutputDirectory", "." + java.io.File.pathSeparator);
+                Variables.outputDirectory = properties.getProperty("OutputDirectory", "." + java.io.File.pathSeparator);
+                Variables.outputDirectory = Methods.checkDirectory(Variables.outputDirectory);
 
-                if (!Variables.outputDirector.endsWith(java.io.File.pathSeparator)) {
-                    Variables.outputDirector += java.io.File.pathSeparator;
-                }
+            }
+            //Compress
+            if (properties.containsKey("OutputLimit")) {
+                Variables.outputSizeLimit = Methods.filesizeToBytes(properties.getProperty("OutputLimit", "500MB"));
+            }
+            if (properties.containsKey("DeleteAfterCompress")) {
+                Variables.deleteAfterCompress = Boolean.valueOf(properties.getProperty("DeleteAfterCompress", "true"));
+            }
+            if (properties.containsKey("CompressorType")) {
+                Variables.compressType = Variables.CompressType.valueOf(properties.getProperty("CompressorType", Variables.CompressType.ZIP.name()));
             }
 
-            //Debug
+            //
+            // Debug
+            //
             if (properties.containsKey("Debug")) {
                 Variables.debug = Boolean.valueOf(properties.getProperty("Debug", "false"));
             }
@@ -109,16 +130,28 @@ public class Microbot {
                 Variables.vv = Boolean.valueOf(properties.getProperty("VeryVerbos", "false"));
             }
             //Done reading ...
-            Variables.logger.Log(Microbot.class, Variables.LogType.Info, "Config file read " + Variables.ANSI_GREEN + "successfully" + Variables.ANSI_RESET + ".");
+            Variables.logger.Log(Microbot.class, Variables.LogType.Info, "Config file read " + Methods.Colorize("successfully", Methods.Color.Green) + ".");
 
             if (Variables.vv) {
                 //TODO print value of each variable.
             }
 
+            //Post Configuration Checker:
+            //Web Requests
+            //Check min time and max time
+            if (Variables.maxSleep <= Variables.minSleep) {
+                if (Variables.debug) {
+                    Variables.logger.Log(Microbot.class, Variables.LogType.Warning, "Max time is greater than min time. Setting both to min time ...");
+                }
+
+                Variables.maxSleep = Variables.minSleep;
+
+            }
+
         } catch (IOException e) {
             if (e instanceof FileNotFoundException) {
                 //Create config file and try again
-                Variables.logger.Log(Microbot.class, Variables.LogType.Warning, "Config file not found. " + Variables.ANSI_WHITE + "Create a new one." + Variables.ANSI_RESET);
+                Variables.logger.Log(Microbot.class, Variables.LogType.Warning, "Config file not found. " + Methods.Colorize("Create a new one.", Methods.Color.White));
                 writeConfiguration();
                 Variables.logger.Log(Microbot.class, Variables.LogType.Info, "Config file written successfully. Retrying ...");
                 readConfiguration();
@@ -128,7 +161,7 @@ public class Microbot {
 
     /**
      * This method will create default configuration file
-     * (<b>properties.config</b>).
+     * {@code properties.config}.
      */
     private static void writeConfiguration() {
         Properties prop = new Properties();
@@ -155,8 +188,10 @@ public class Microbot {
             //Load and Store
             prop.setProperty("InputFile", Variables.inputFile);
             prop.setProperty("MainURLColumnName", Variables.inputFileLinksColumnName);
-            prop.setProperty("OutputFileName", Variables.inputFileOutputFileName);
-            prop.setProperty("OutputDirectory", Variables.outputDirector);
+            prop.setProperty("OutputFileColumnName", Variables.inputFileOutputFileName);
+            prop.setProperty("OutputDirectory", Variables.outputDirectory);
+            prop.setProperty("OutputLimit", Methods.filesizeToHumanReadable(Variables.outputSizeLimit, true));
+            prop.setProperty("DeleteAfterCompress", String.valueOf(Variables.deleteAfterCompress));
 
             //Debug
             prop.setProperty("Debug", String.valueOf(Variables.debug));
@@ -165,13 +200,14 @@ public class Microbot {
             // save properties to project root folder
             prop.store(output, "Microbot Configuration");
         } catch (IOException e) {
-            Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Error in writing configuration file. Detail:\r\n" + Variables.ANSI_RED + e.getMessage() + Variables.ANSI_RESET);
+            Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Error in writing configuration file. Detail:\r\n" + Methods.Colorize(e.getMessage(), Methods.Color.Red));
             System.exit(-1);
         }
     }
 
     /**
-     * This method will fill necessary information into RAM.
+     * This method will fill necessary information into RAM. Variables are
+     * stored in {@link Variables}
      */
     private static void fillConfiguration() {
         try {
@@ -180,6 +216,7 @@ public class Microbot {
             int URLIndex = 0;
             int OutputIndex = 0;
             BufferedReader br = null;
+            Set<WebDocument> dummySet = new HashSet<WebDocument>();
 
             //Read URLs (and outputs):
             br = new BufferedReader(new FileReader(Variables.inputFile));
@@ -194,23 +231,37 @@ public class Microbot {
             OutputIndex = Arrays.asList(items).indexOf(Variables.inputFileOutputFileName);
 
             if (URLIndex == -1) {
-                Variables.logger.Log(Microbot.class, Variables.LogType.Error, Variables.ANSI_RED + Variables.inputFileLinksColumnName + Variables.ANSI_RESET + " not found in the input file [" + Variables.ANSI_GREEN + Variables.inputFile + Variables.ANSI_RESET);
+                Variables.logger.Log(Microbot.class, Variables.LogType.Error, Methods.Colorize(Variables.inputFileLinksColumnName, Methods.Color.Red) + " not found in the input file [" + Methods.Colorize(Variables.inputFile, Methods.Color.Green));
                 System.exit(-2);
             } else if (OutputIndex == -1) {
-                Variables.logger.Log(Microbot.class, Variables.LogType.Error, Variables.ANSI_RED + Variables.inputFileLinksColumnName + Variables.ANSI_RESET + " not found in the input file [" + Variables.ANSI_GREEN + Variables.inputFile + Variables.ANSI_RESET);
+                Variables.logger.Log(Microbot.class, Variables.LogType.Error, Methods.Colorize(Variables.inputFileLinksColumnName, Methods.Color.Red) + " not found in the input file [" + Methods.Colorize(Variables.inputFile, Methods.Color.Green));
                 System.exit(-3);
             } else {
                 line = br.readLine();
 
                 while (line != null) {
-                    Variables.links.add(new WebDocument(line.split(",")[URLIndex], line.split(",")[OutputIndex]));
+                    WebDocument doc = new WebDocument(line.split(",")[URLIndex], line.split(",")[OutputIndex]);
+                    if (doc.getOutputName().endsWith("html") || doc.getOutputName().endsWith("htm")) {
+                        //Variables.links.add(doc);
+                        dummySet.add(doc);
+                    }
                     line = br.readLine();
+                }
+                if (Variables.links.isEmpty()) {
+                    Variables.logger.Log(Microbot.class, Variables.LogType.Warning, "No web document added. Please check CSV file structure and check if the output file names ends with " + Methods.Colorize("html or htm", Methods.Color.Cyan) + ".");
                 }
 
                 if (Variables.debug) {
                     Variables.logger.Log(Microbot.class, Variables.LogType.Info, "[+] Done reading input file (profiles)");
                 }
             }
+            
+            //Fill the main Vector:
+            Variables.links = new Vector<WebDocument>(dummySet);
+            
+            //Clear RAM:
+            dummySet.clear();
+            dummySet = null;
 
             //Read UAs:
             if (Variables.debug) {
@@ -232,9 +283,9 @@ public class Microbot {
             System.gc();
 
         } catch (FileNotFoundException ex) {
-            Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Input file not found.\r\nDetails:\r\n" + Variables.ANSI_RED + ex.getMessage() + Variables.ANSI_RESET + "\r\n");
+            Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Input file not found.\r\nDetails:\r\n" + Methods.Colorize(ex.getMessage(), Methods.Color.Red) + "\r\n");
         } catch (IOException ex) {
-            Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Error in reading file.\r\nDetails:\r\n" + Variables.ANSI_RED + ex.getMessage() + Variables.ANSI_RESET + "\r\n");
+            Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Error in reading file.\r\nDetails:\r\n" + Methods.Colorize(ex.getMessage(), Methods.Color.Red) + "\r\n");
         }
     }
 

@@ -5,6 +5,7 @@
  */
 package Fetcher;
 
+import helpers.Methods;
 import helpers.Variables;
 import helpers.WebDocument;
 import java.io.FileWriter;
@@ -13,6 +14,9 @@ import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.net.URL;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.InflaterInputStream;
+import org.apache.commons.io.IOUtils;
 
 /**
  *
@@ -44,12 +48,12 @@ public class Fetcher implements Runnable {
 
     public void startFetching() {
         if (t != null && !t.isAlive()) {
-            t.run();
+            t.start();
             if (Variables.debug) {
-                Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Fetcher (" + Variables.ANSI_BLUE + name + Variables.ANSI_RESET + ")");
+                Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Fetcher (" + Methods.Colorize(name, Methods.Color.Blue) + ")");
             }
         } else {
-            Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Failed to start fetcher (" + Variables.ANSI_BLUE + name + Variables.ANSI_RESET + ")");
+            Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Failed to start fetcher (" + Methods.Colorize(name, Methods.Color.Blue) + ")");
         }
     }
 
@@ -65,6 +69,7 @@ public class Fetcher implements Runnable {
 
         //PreConnfiguration
         //Configure proxy
+        //TODO Anonymizer is deprecated. Use in following for warning generation.
         switch (Variables.anonymizerProxyType) {
             case DIRECT:
                 p = new Proxy(Proxy.Type.DIRECT, new InetSocketAddress(Variables.anonymizerIP, Variables.anonymizerPort));
@@ -81,78 +86,103 @@ public class Fetcher implements Runnable {
                 break;
         }
 
-        while (!t.isInterrupted()) {
-            link = Variables.getNextProfileLink();
+        link = Methods.getNextProfileLink();
+        while (link != null) {
+            //Start fetching ...
 
-            if (link == null) { //The links are finished!
-                t.interrupt();
-            } else {
-                //Start fetching ...
+            if (Variables.debug && Variables.vv) {
+                Variables.logger.Log(Fetcher.class, Variables.LogType.Trace, "Fetcher (" + Methods.Colorize(name, Methods.Color.Green) + ") start getting " + link.getUrl());
+            }
 
-                if (Variables.debug && Variables.vv) {
-                    Variables.logger.Log(Fetcher.class, Variables.LogType.Trace, "Fetcher (" + Variables.ANSI_GREEN + name + Variables.ANSI_RESET + ") start getting " + link.getUrl());
+            try {
+                if (Variables.anonymizerProxyType == Variables.AnonymizerProxy.NONE) {
+                    connection = (HttpURLConnection) new URL(link.getUrl()).openConnection();
+                } else {
+                    connection = (HttpURLConnection) new URL(link.getUrl()).openConnection(p);
+                }
+                connection.setDoOutput(true);
+                connection.setDoInput(true);
+                connection.setRequestProperty("User-Agent", Methods.getRandomUserAgent());
+                connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+                connection.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
+                connection.setRequestProperty("Accept-Encoding", "gzip, deflated");
+
+                if (!(Variables.Cookie == null || Variables.Cookie.equalsIgnoreCase(""))) {
+                    connection.setRequestProperty("Cookie", Variables.Cookie);
                 }
 
-                try {
-                    if (Variables.anonymizerProxyType != Variables.AnonymizerProxy.NONE) {
-                        connection = (HttpURLConnection) new URL(link.getUrl()).openConnection();
-                    } else {
-                        connection = (HttpURLConnection) new URL(link.getUrl()).openConnection(p);
-                    }
-                    connection.setDoOutput(true);
-                    connection.setDoInput(true);
-                    connection.setRequestProperty("User-Agent", Variables.getRandomUserAgent());
-                    connection.setRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
-                    connection.setRequestProperty("Accept-Language", "en-US,en;q=0.5");
-                    connection.setRequestProperty("Accept-Encoding", "gzip, deflated");
+                connection.setRequestMethod("GET");
 
-                    if (Variables.Cookie != "") {
-                        connection.setRequestProperty("Cookie", Variables.Cookie);
+                connection.connect();
+
+                if (connection.getResponseCode() == 200) {
+                    //Write to file
+                    String outputName = Variables.outputDirectory + link.getOutputName();
+
+                    //Check extension
+                    if (!(outputName.endsWith("html") || outputName.endsWith("htm"))) {
+                        outputName += "html";
                     }
 
-                    connection.setRequestMethod("GET");
-
-                    connection.connect();
-
-                    if (connection.getResponseCode() == 200) {
-                        //Write to file
-                        String outputName = Variables.outputDirector + link.getOutputName();
-
-                        //Check extension
-                        if (!outputName.endsWith("html") || !outputName.endsWith("htm")) {
-                            outputName += "html";
-                        }
-
-                        FileWriter fw = new FileWriter(outputName);
-                        fw.write(String.valueOf(connection.getContent()));
-                        fw.flush();
-                        fw.close();
+                    //get content
+                    String html = "";
+                    if (connection.getContentEncoding().equalsIgnoreCase("gzip")) {
+                        html = IOUtils.toString(new GZIPInputStream(connection.getInputStream()));
+                    } else if (connection.getContentEncoding().equalsIgnoreCase("deflate")) {
+                        html = IOUtils.toString(new InflaterInputStream(connection.getInputStream()));
                     }
                     
-                    if (Variables.debug && Variables.vv) {
-                        Variables.logger.Log(Fetcher.class, Variables.LogType.Info, "[+] Done fetching (" + Variables.ANSI_RED + link.getUrl() + Variables.ANSI_RESET + "]");
-                    }
-
-                    //Close the connection
-                    connection.disconnect();
-                    
-                    
-                    
-                } catch (IOException ex) {
+                    FileWriter fw = new FileWriter(outputName);
+                    fw.write(html);
+                    fw.flush();
+                    fw.close();
+                } else { //The returned code is not 200.
+                    //TODO Add errors in a separate list.
                     if (Variables.debug) {
-                        if (Variables.vv) {
-                            Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Error in fetching [" + Variables.ANSI_RED + link.getUrl() + Variables.ANSI_RESET + "] in fetcher (" + Variables.ANSI_YELLOW + name + Variables.ANSI_RESET + ") for writing in (" + Variables.ANSI_WHITE + link.getOutputName() + Variables.ANSI_RESET + "). Detail:\r\n" + ex.getMessage());
-                        } else {
-                            Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Error in fetching [" + Variables.ANSI_RED + link.getUrl() + Variables.ANSI_RESET + "]");
-                        }
+                        Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Server responded (" + Methods.Colorize(connection.getResponseCode() + " - " + connection.getResponseMessage(), Methods.Color.Red) + ") for " + link.getUrl());
+                    }
+                }
+
+                if (Variables.debug && Variables.vv) {
+                    Variables.logger.Log(Fetcher.class, Variables.LogType.Info, "[+] Done fetching (" + Methods.Colorize(link.getUrl(), Methods.Color.Red) + "]");
+                }
+
+                //Close the connection
+                connection.disconnect();
+
+                try {
+                    synchronized (t) {
+                        t.wait(Methods.getNextRandom() * 1000);
+                    }
+                } catch (InterruptedException ex) {
+                    if (Variables.debug) {
+                        Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Cannot interrupt thread [" + Methods.Colorize(name, Methods.Color.Red) + "]. Interrupted before!");
+                    }
+                } catch (IllegalArgumentException ex) {
+                    if (Variables.debug) {
+                        Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "-1 is returned as random number for thread [" + Methods.Colorize(name, Methods.Color.Red) + "].");
+                    }
+                }
+
+                //Check size limit and report progress ...
+                Methods.checkFinished();
+
+            } catch (IOException ex) {
+                if (Variables.debug) {
+                    if (Variables.vv) {
+                        Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Error in fetching [" + Methods.Colorize(link.getUrl(), Methods.Color.Red) + "] in fetcher (" + Methods.Colorize(name, Methods.Color.Yellow) + ") for writing in (" + Methods.Colorize(link.getOutputName(), Methods.Color.White) + "). Detail:\r\n" + ex.getMessage());
+                    } else {
+                        Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Error in fetching [" + Methods.Colorize(link.getUrl(), Methods.Color.Red) + "]");
                     }
                 }
             }
+            
+            link = Methods.getNextProfileLink();
         }
 
         //URLs done. This thread finishes its work.
         if (Variables.debug) {
-            Variables.logger.Log(Fetcher.class, Variables.LogType.Info, "Fetcher (" + Variables.ANSI_GREEN + name + Variables.ANSI_RESET + ") finished its work.");
+            Variables.logger.Log(Fetcher.class, Variables.LogType.Info, "Fetcher (" + Methods.Colorize(name, Methods.Color.Green) + ") finished its work.");
         }
 
     }

@@ -7,7 +7,7 @@ package helpers;
 
 import Fetcher.Controller;
 import java.util.HashSet;
-import java.util.Random;
+import java.util.Set;
 import java.util.Vector;
 
 /**
@@ -40,7 +40,7 @@ public class Variables {
     // Thread
     public static int threadCount = 5;
     public static Controller threadController = new Controller();
-    
+
     // Sleep
     public static int maxSleep = 10;
     public static int minSleep = 5;
@@ -64,15 +64,21 @@ public class Variables {
     public static String inputFile = "profiles.csv";
     public static String inputFileLinksColumnName = "url";
     public static String inputFileOutputFileName = "profile";
-    public static HashSet<WebDocument> links = new HashSet<WebDocument>();
+    public static Vector<WebDocument> links = new Vector<WebDocument>();
 
     //Store
-    public static String outputDirector = "./";
-    
-    //Compress
-    //TODO Add compress configuration and size limit
-    //</editor-fold>
+    public static String outputDirectory = "./";
 
+    //Compress
+    public enum CompressType {TAR, ZIP, RAR, GZIP};
+    public static Compressor compressor = new Compressor();
+    
+    public static long outputSizeLimit = Methods.filesizeToBytes("500MB");
+    public static boolean deleteAfterCompress = true;
+    public static CompressType compressType = CompressType.ZIP;
+    
+    
+    //</editor-fold>
     //<editor-fold defaultstate="expanded" desc="Logging">
     // Logging
     //
@@ -85,47 +91,6 @@ public class Variables {
 
     public static boolean debug = false; //prints debug information
     public static boolean vv = false; //prints debug information very verbos
-
-    // Color
-    //TODO Make a colorized method.
-    public static final String ANSI_RESET = "\u001B[0m";
-    public static final String ANSI_BLACK = "\u001B[30m";
-    public static final String ANSI_RED = "\u001B[31m";
-    public static final String ANSI_GREEN = "\u001B[32m";
-    public static final String ANSI_YELLOW = "\u001B[33m";
-    public static final String ANSI_BLUE = "\u001B[34m";
-    public static final String ANSI_PURPLE = "\u001B[35m";
-    public static final String ANSI_CYAN = "\u001B[36m";
-    public static final String ANSI_WHITE = "\u001B[37m";
     //</editor-fold>
 
-    private static int profileCounter = 0;
-    private static Random r = new Random();
-
-    public static synchronized WebDocument getNextProfileLink() {
-        //TODO Check if it's correctly working or not.
-        if (links.iterator().hasNext()) {
-            return (links.iterator().next());
-        } else {
-            return null;
-        }
-    }
-
-    public static String getRandomUserAgent() {
-        if (Variables.randomUA) {
-            //TODO Check if its return true or not.
-            //if UAs.size() correct or +1?
-            return (UAs.elementAt(r.nextInt(UAs.size())));
-        } else {
-            return (UAs.elementAt(0));
-        }
-    }
-    
-    /**
-     * This method will run after each thread finished its work.
-     * If size limit enabled in configuration, it will tar and delete the main files.
-     */
-    public static synchronized void checkFinished() {
-        
-    }
 }

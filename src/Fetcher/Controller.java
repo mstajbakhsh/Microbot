@@ -28,9 +28,9 @@ public class Controller {
         
         threads = new Fetcher[Variables.threadCount];
         
-        for (Fetcher f : threads) {
-            f = new Fetcher(ID++);
-            f.startFetching();
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new Fetcher(ID++);
+            threads[i].startFetching();
         }
     }
     

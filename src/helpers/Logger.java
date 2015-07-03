@@ -13,7 +13,8 @@ import org.slf4j.LoggerFactory;
  */
 public class Logger {
 
-    org.slf4j.impl.SimpleLogger logger;
+    private org.slf4j.impl.SimpleLogger logger;
+    private double progress = 0.0d;
 
     public Logger() {
         System.setProperty(org.slf4j.impl.SimpleLogger.SHOW_DATE_TIME_KEY, "true");
@@ -44,6 +45,17 @@ public class Logger {
             case Warning:
                 logger.warn(message);
                 break;
+        }
+    }
+    
+    /**
+     * This method will declare the progress of the links completed successfully.
+     * @param progress The progress value between 0 and 100.
+     */
+    public void logProgress(double progress) {
+        if (progress - this.progress == 5) { //Display with 5 percents progresses.
+            this.progress = progress;
+            Variables.logger.Log(Logger.class, Variables.LogType.Info, "Completed links progress:\t" + Methods.Colorize(String.valueOf(progress), Methods.Color.Green) + "%");
         }
     }
 
