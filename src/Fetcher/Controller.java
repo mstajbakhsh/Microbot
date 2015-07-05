@@ -10,28 +10,41 @@ import java.util.Vector;
 
 /**
  * Class for storing and managing threads.
+ *
  * @author Mir Saman Tajbakhsh
  */
 public class Controller {
-    
-    Fetcher[] threads;
-    
+
+    private Fetcher[] threads;
+
     /**
      * Dummy constructor
      */
     public Controller() {
-        
+
     }
-    
+
     public void Start() {
         int ID = 0;
-        
+
         threads = new Fetcher[Variables.threadCount];
-        
+
+        Variables.state = Variables.microbotState.Fetching;
+
         for (int i = 0; i < threads.length; i++) {
             threads[i] = new Fetcher(ID++);
             threads[i].startFetching();
         }
     }
-    
+
+    public void notifyAllThreads() {
+        for (int i = 0; i < threads.length; i++) {
+            if (threads[i] != null) {
+                synchronized (threads[i].getThread()) {
+                    threads[i].getThread().notify();
+                }
+            }
+        }
+    }
+
 }

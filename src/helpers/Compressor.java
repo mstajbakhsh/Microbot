@@ -36,6 +36,12 @@ public class Compressor {
         String outputFileName = null;
         HashSet<File> inputFiles = new HashSet<>();
 
+        try {
+            Variables.startCompress.acquire();
+        } catch (InterruptedException ex) {
+            Variables.logger.Log(Compressor.class, Variables.LogType.Error, "Can not accure semaphore for compression. Details:\r\n" + ex.getMessage());
+        }
+
         //<editor-fold defaultstate="collapsed" desc="Pre Process">
         FileFilter ff = null;
 
@@ -96,6 +102,13 @@ public class Compressor {
 //</editor-fold>
 
         //Compress
+        if (Variables.debug) {
+            Variables.logger.Log(Compressor.class, Variables.LogType.Info, "Starting compression [" + outputFileName + "]");
+            if (Variables.vv) {
+                Variables.logger.Log(Compressor.class, Variables.LogType.Info, "Total files to compress: " + inputFiles.size());
+            }
+        }
+
         switch (compressorType) {
 
             case ZIP:
@@ -108,7 +121,9 @@ public class Compressor {
 
                     for (File file : inputFiles) {
 
-                        System.out.println("File Added : " + file);
+                        if (Variables.debug && Variables.vv) {
+                            Variables.logger.Log(Compressor.class, Variables.LogType.Info, file + " -> added to -> [ " + outputFileName + " ]");
+                        }
                         ZipEntry ze = new ZipEntry(file.getName());
                         zos.putNextEntry(ze);
 
@@ -120,9 +135,11 @@ public class Compressor {
                         }
 
                         in.close();
-                        
+
                         if (Variables.deleteAfterCompress) {
                             file.delete();
+                        } else {
+                            Variables.logger.Log(Compressor.class, Variables.LogType.Warning, "Undeleting files may create multiple compressed files with duplicate data.");
                         }
                     }
 
@@ -132,12 +149,22 @@ public class Compressor {
                     Variables.logger.Log(Compressor.class, Variables.LogType.Error, "Error in compressing " + outputFileName + ". Details:\r\n" + ex.getMessage());
                 }
                 break;
-                
+
             case GZIP:
             case RAR:
             case TAR:
                 throw new NotImplementedException();
         }
+
+        if (Variables.debug) {
+            Variables.logger.Log(Compressor.class, Variables.LogType.Info, "[+] Compression finished! [" + outputFileName + "]");
+            if (Variables.vv) {
+                Variables.logger.Log(Compressor.class, Variables.LogType.Info, "Size after compression: " + Methods.filesizeToHumanReadable((new File(outputFileName)).length(), false));
+            }
+        }
+        
+        //Notify all waited threads
+        Variables.threadController.notifyAllThreads();
     }
 
 }

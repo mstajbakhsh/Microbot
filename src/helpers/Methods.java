@@ -46,16 +46,28 @@ public class Methods {
      * enabled in configuration, it will zip and delete the main files due to configuration.
      */
     public static synchronized void checkFinished() {
+        //TODO Check semaphor or mutex
         //Check size limit of output folder
         long size = getFolderSize(Variables.outputDirectory);
         if (size >= Variables.outputSizeLimit) {
-            Variables.compressor.Compress(Variables.outputDirectory, ".." + File.pathSeparator + "Compressed", Variables.CompressType.ZIP);
+            
+            //Change state
+            Variables.state = Variables.microbotState.Compressing;
+            
+            if (Variables.debug) {
+                Variables.logger.Log(Methods.class, Variables.LogType.Info, "File threshold reached [" + filesizeToHumanReadable(size, false) + "]");
+            }
+            
+            Variables.compressor.Compress(Variables.outputDirectory, Variables.outputDirectory + ".." + File.separator + "Compressed" + File.separator, Variables.CompressType.ZIP);
         }
         
         //report progress
         finishedCounter++;
         double progress = ((double) finishedCounter / (double) Variables.links.size());
         Variables.logger.logProgress(progress);
+        
+        //Resume downloading
+        Variables.state = Variables.microbotState.Fetching;
     }
 
     /**
@@ -125,7 +137,7 @@ public class Methods {
      * @return Size of all elements in long or 0 if security restrictions occur
      * or -1 if the size is longer than {@link Long#MAX_VALUE}.
      */
-    private static long getFolderSize(String Directory) {
+    public static synchronized long getFolderSize(String Directory) {
         return FileUtils.sizeOfDirectory(new File(Directory));
     }
     

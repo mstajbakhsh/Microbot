@@ -131,7 +131,7 @@ public class Fetcher implements Runnable {
                     } else if (connection.getContentEncoding().equalsIgnoreCase("deflate")) {
                         html = IOUtils.toString(new InflaterInputStream(connection.getInputStream()));
                     }
-                    
+
                     FileWriter fw = new FileWriter(outputName);
                     fw.write(html);
                     fw.flush();
@@ -165,7 +165,23 @@ public class Fetcher implements Runnable {
                 }
 
                 //Check size limit and report progress ...
+                
                 Methods.checkFinished();
+                
+                long size = Methods.getFolderSize(Variables.outputDirectory);
+                if (size >= Variables.outputSizeLimit) {
+                    //Release for starting compressor ...
+                    Variables.startCompress.release();
+
+                    //Block itself
+                    try {
+                        Thread.currentThread().wait();
+                    } catch (InterruptedException ex) {
+                        if (Variables.debug) {
+                            Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Error in waiting thread [" + name + "]. Details:\r\n" + ex.getMessage());
+                        }
+                    }
+                }
 
             } catch (IOException ex) {
                 if (Variables.debug) {
@@ -176,7 +192,7 @@ public class Fetcher implements Runnable {
                     }
                 }
             }
-            
+
             link = Methods.getNextProfileLink();
         }
 
@@ -185,6 +201,10 @@ public class Fetcher implements Runnable {
             Variables.logger.Log(Fetcher.class, Variables.LogType.Info, "Fetcher (" + Methods.Colorize(name, Methods.Color.Green) + ") finished its work.");
         }
 
+    }
+    
+    public Thread getThread() {
+        return t;
     }
 
 }

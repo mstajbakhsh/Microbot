@@ -9,6 +9,7 @@ import Fetcher.Controller;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.Semaphore;
 
 /**
  *
@@ -21,7 +22,7 @@ public class Variables {
     public enum Anonymizer {
 
         TOR, I2P
-    };
+    }
 
     public enum AnonymizerProxy {
 
@@ -40,6 +41,14 @@ public class Variables {
     // Thread
     public static int threadCount = 5;
     public static Controller threadController = new Controller();
+    public static Semaphore startCompress = null; // It will initialize in fillConfiguration.
+
+    public enum microbotState {
+
+        Fetching, Compressing, Initializing, Starting, Finished, Dummy
+    }
+    
+    public static microbotState state = microbotState.Dummy;
 
     // Sleep
     public static int maxSleep = 10;
@@ -70,14 +79,16 @@ public class Variables {
     public static String outputDirectory = "./";
 
     //Compress
-    public enum CompressType {TAR, ZIP, RAR, GZIP};
+    public enum CompressType {
+
+        TAR, ZIP, RAR, GZIP
+    };
     public static Compressor compressor = new Compressor();
-    
+
     public static long outputSizeLimit = Methods.filesizeToBytes("500MB");
     public static boolean deleteAfterCompress = true;
     public static CompressType compressType = CompressType.ZIP;
-    
-    
+
     //</editor-fold>
     //<editor-fold defaultstate="expanded" desc="Logging">
     // Logging

@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.Semaphore;
 
 /**
  *
@@ -31,11 +32,16 @@ public class Microbot {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
+        
+        Variables.state = Variables.microbotState.Initializing;
         readConfiguration();
         fillConfiguration();
 
         //TODO Add error checker
         //Add a boolean and check if any exception occured in configuration?
+        
+        
+        Variables.state = Variables.microbotState.Starting;
         //Start threads
         Variables.threadController.Start();
     }
@@ -71,8 +77,8 @@ public class Microbot {
             //
             // Web Requests
             //
-            if (properties.containsKey("threadCount")) {
-                Variables.threadCount = Integer.parseInt(properties.getProperty("threadCount", "5"));
+            if (properties.containsKey("ThreadCount")) {
+                Variables.threadCount = Integer.parseInt(properties.getProperty("ThreadCount", "5"));
             }
             if (properties.containsKey("MaxSleep")) {
                 Variables.maxSleep = Integer.parseInt(properties.getProperty("MaxSleep", "10"));
@@ -279,6 +285,9 @@ public class Microbot {
             if (Variables.debug) {
                 Variables.logger.Log(Microbot.class, Variables.LogType.Info, "[+] Done reading user agents list.");
             }
+            
+            // Semaphore
+            Variables.startCompress = new Semaphore(Variables.threadCount);
 
             System.gc();
 
