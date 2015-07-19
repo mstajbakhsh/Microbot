@@ -12,12 +12,14 @@ import java.util.Properties;
 import helpers.Variables;
 import helpers.WebDocument;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.OutputStream;
 import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.Semaphore;
@@ -32,18 +34,19 @@ public class Microbot {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-        
+
         Variables.state = Variables.microbotState.Initializing;
         readConfiguration();
         fillConfiguration();
 
         //TODO Add error checker
         //Add a boolean and check if any exception occured in configuration?
-        
-        
         Variables.state = Variables.microbotState.Starting;
         //Start threads
         Variables.threadController.Start();
+
+        //Set shut down hook
+        setShutDownHook();
     }
 
     /**
@@ -77,6 +80,9 @@ public class Microbot {
             //
             // Web Requests
             //
+            if (properties.containsKey("AcceptSelfSignedCertificates")) {
+                Variables.acceptAllCerts = Boolean.getBoolean(properties.getProperty("AcceptSelfSignedCertificates", "true"));
+            }
             if (properties.containsKey("ThreadCount")) {
                 Variables.threadCount = Integer.parseInt(properties.getProperty("ThreadCount", "5"));
             }
@@ -109,11 +115,13 @@ public class Microbot {
             if (properties.containsKey("OutputFileColumnName")) {
                 Variables.inputFileOutputFileName = properties.getProperty("OutputFileColumnName", "");
             }
+            if (properties.containsKey("LinksSeparator")) {
+                Variables.inputFileLinksSeparator = properties.getProperty("LinksSeparator", "");
+            }
             //Store
             if (properties.containsKey("OutputDirectory")) {
                 Variables.outputDirectory = properties.getProperty("OutputDirectory", "." + java.io.File.pathSeparator);
                 Variables.outputDirectory = Methods.checkDirectory(Variables.outputDirectory);
-
             }
             //Compress
             if (properties.containsKey("OutputLimit")) {
@@ -184,6 +192,7 @@ public class Microbot {
             prop.setProperty("AnonymizerPort", String.valueOf(Variables.anonymizerPort));
 
             //Web Requests
+            prop.setProperty("AcceptSelfSignedCertificates", String.valueOf(Variables.acceptAllCerts));
             prop.setProperty("ThreadCount", String.valueOf(Variables.threadCount));
             prop.setProperty("MaxSleep", String.valueOf(Variables.maxSleep));
             prop.setProperty("MinSleep", String.valueOf(Variables.minSleep));
@@ -194,6 +203,7 @@ public class Microbot {
             //Load and Store
             prop.setProperty("InputFile", Variables.inputFile);
             prop.setProperty("MainURLColumnName", Variables.inputFileLinksColumnName);
+            prop.setProperty("LinksSeparator", Variables.inputFileLinksSeparator);
             prop.setProperty("OutputFileColumnName", Variables.inputFileOutputFileName);
             prop.setProperty("OutputDirectory", Variables.outputDirectory);
             prop.setProperty("OutputLimit", Methods.filesizeToHumanReadable(Variables.outputSizeLimit, true));
@@ -222,7 +232,7 @@ public class Microbot {
             int URLIndex = 0;
             int OutputIndex = 0;
             BufferedReader br = null;
-            Set<WebDocument> dummySet = new HashSet<WebDocument>();
+            Set<WebDocument> dummySet = new LinkedHashSet<WebDocument>();
 
             //Read URLs (and outputs):
             br = new BufferedReader(new FileReader(Variables.inputFile));
@@ -261,13 +271,21 @@ public class Microbot {
                     Variables.logger.Log(Microbot.class, Variables.LogType.Info, "[+] Done reading input file (profiles)");
                 }
             }
-            
+
             //Fill the main Vector:
-            Variables.links = new Vector<WebDocument>(dummySet);
+            /*List<WebDocument> dummyList = new ArrayList();
+            dummyList.addAll(dummySet);
             
+            dummySet.clear();
+            
+            Collections.reverse(dummyList);
+            */
+            Variables.links = new Vector<WebDocument>(dummySet);
+
             //Clear RAM:
             dummySet.clear();
             dummySet = null;
+            System.gc();
 
             //Read UAs:
             if (Variables.debug) {
@@ -285,9 +303,19 @@ public class Microbot {
             if (Variables.debug) {
                 Variables.logger.Log(Microbot.class, Variables.LogType.Info, "[+] Done reading user agents list.");
             }
-            
+
             // Semaphore
-            Variables.startCompress = new Semaphore(Variables.threadCount);
+            Variables.startMakeLogs = new Semaphore(Variables.threadCount);
+
+            //Logger
+            Variables.successLogsFile.mkdir(); //Create directories
+            Variables.errorLogsFile.mkdir();
+
+            Variables.successLogsFile = new File("LOGS" + File.separator + "success.log"); //Create files
+            Variables.errorLogsFile = new File("LOGS" + File.separator + "error.log");
+
+            Variables.successFileWriter = new FileWriter(Variables.successLogsFile, true); //Access files
+            Variables.errorFileWriter = new FileWriter(Variables.errorLogsFile, true);
 
             System.gc();
 
@@ -296,6 +324,24 @@ public class Microbot {
         } catch (IOException ex) {
             Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Error in reading file.\r\nDetails:\r\n" + Methods.Colorize(ex.getMessage(), Methods.Color.Red) + "\r\n");
         }
+    }
+
+    /**
+     * This method will handle when user presses {@code CTRL + C}
+     */
+    private static void setShutDownHook() {
+        final Thread MainThread = Thread.currentThread();
+
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                try {
+                    Variables.threadController.Stop();
+                    MainThread.join();
+                } catch (InterruptedException ex) {
+                    Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Error while attaching shutdown hook. Details:\r\n" + ex.getMessage());
+                }
+            }
+        });
     }
 
 }

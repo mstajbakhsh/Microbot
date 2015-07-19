@@ -5,6 +5,8 @@
  */
 package helpers;
 
+import java.io.IOException;
+import java.net.HttpURLConnection;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -56,6 +58,16 @@ public class Logger {
         if (progress - this.progress == 5) { //Display with 5 percents progresses.
             this.progress = progress;
             Variables.logger.Log(Logger.class, Variables.LogType.Info, "Completed links progress:\t" + Methods.Colorize(String.valueOf(progress), Methods.Color.Green) + "%");
+        }
+    }
+    
+    public synchronized void logResult(HttpURLConnection URL, WebDocument Doc) throws IOException {
+        if (URL.getResponseCode() == 200) {
+            Variables.successFileWriter.write(URL.getURL().toString() + "\r\n");
+            Variables.successFileWriter.flush();
+        } else {
+            Variables.errorFileWriter.write(URL.getResponseCode() + "," + URL.getResponseMessage() + "," + URL.getURL().toString() + "\r\n");
+            Variables.errorFileWriter.flush();
         }
     }
 

@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 /**
  * This class will handle compress of fetched files.
@@ -33,14 +32,13 @@ public class Compressor {
      */
     public static void Compress(String inputDirectory, String outputDirectory, Variables.CompressType compressorType) {
 
+        if (compressorType == Variables.CompressType.NONE) {
+            return; //Do not compress
+            //This code occurs when user specifies a folder limit but declared no compression.
+        }
+        
         String outputFileName = null;
         HashSet<File> inputFiles = new HashSet<>();
-
-        try {
-            Variables.startCompress.acquire();
-        } catch (InterruptedException ex) {
-            Variables.logger.Log(Compressor.class, Variables.LogType.Error, "Can not accure semaphore for compression. Details:\r\n" + ex.getMessage());
-        }
 
         //<editor-fold defaultstate="collapsed" desc="Pre Process">
         FileFilter ff = null;
@@ -153,7 +151,7 @@ public class Compressor {
             case GZIP:
             case RAR:
             case TAR:
-                throw new NotImplementedException();
+                throw new IllegalArgumentException("Only ZIP format is supported in this version.");
         }
 
         if (Variables.debug) {
@@ -162,9 +160,6 @@ public class Compressor {
                 Variables.logger.Log(Compressor.class, Variables.LogType.Info, "Size after compression: " + Methods.filesizeToHumanReadable((new File(outputFileName)).length(), false));
             }
         }
-        
-        //Notify all waited threads
-        Variables.threadController.notifyAllThreads();
     }
 
 }

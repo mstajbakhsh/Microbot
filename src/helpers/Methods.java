@@ -8,11 +8,20 @@ package helpers;
 import static helpers.Variables.UAs;
 import static helpers.Variables.links;
 import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.security.GeneralSecurityException;
+import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.Vector;
 import java.util.regex.Matcher;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import org.apache.commons.io.FileUtils;
 
 /**
@@ -28,13 +37,35 @@ public class Methods {
     //<editor-fold defaultstate="collapsed" desc="Web Requests">
     //Web requests
     public static synchronized WebDocument getNextProfileLink() {
-        return links.get(profileCounter++);
+        try {
+            return links.get(profileCounter++);
+        } catch (IndexOutOfBoundsException ex) {
+            return null;
+        }
+    }
+
+    /**
+     * This method will return the links which are in RAM and are not processed
+     * by threads.
+     *
+     * @return The list of un-fetched URLs or null if any error occur.
+     */
+    public static synchronized Vector<WebDocument> getRemainingProfileLinks() {
+        Vector<WebDocument> temp = new Vector<>();
+
+        try {
+            for (; profileCounter < links.size(); profileCounter++) {
+                temp.add(links.get(profileCounter));
+            }
+        } catch (IndexOutOfBoundsException ex) {
+            return null;
+        }
+
+        return temp;
     }
 
     public static String getRandomUserAgent() {
         if (Variables.randomUA) {
-            //TODO Check if its return true or not.
-            //if UAs.size() correct or +1?
             return (UAs.elementAt(r.nextInt(UAs.size())));
         } else {
             return (UAs.elementAt(0));
@@ -42,32 +73,49 @@ public class Methods {
     }
 
     /**
-     * This method will run after each thread finished its work. If size limit
-     * enabled in configuration, it will zip and delete the main files due to configuration.
+     * This method will report that one of threads finished one of its links.
+     * It will print the progress.
      */
-    public static synchronized void checkFinished() {
-        //TODO Check semaphor or mutex
-        //Check size limit of output folder
-        long size = getFolderSize(Variables.outputDirectory);
-        if (size >= Variables.outputSizeLimit) {
-            
-            //Change state
-            Variables.state = Variables.microbotState.Compressing;
-            
-            if (Variables.debug) {
-                Variables.logger.Log(Methods.class, Variables.LogType.Info, "File threshold reached [" + filesizeToHumanReadable(size, false) + "]");
-            }
-            
-            Variables.compressor.Compress(Variables.outputDirectory, Variables.outputDirectory + ".." + File.separator + "Compressed" + File.separator, Variables.CompressType.ZIP);
-        }
-        
+    public static synchronized void oneFinished() {
         //report progress
         finishedCounter++;
         double progress = ((double) finishedCounter / (double) Variables.links.size());
         Variables.logger.logProgress(progress);
-        
+
         //Resume downloading
         Variables.state = Variables.microbotState.Fetching;
+    }
+
+    public static void trustAllCertificates() {
+        //Certification check
+        // Create a trust manager that does not validate certificate chains
+        TrustManager[] trustAllCerts = new TrustManager[]{
+            new X509TrustManager() {
+                @Override
+                public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                    return new X509Certificate[0];
+                }
+
+                @Override
+                public void checkClientTrusted(
+                        java.security.cert.X509Certificate[] certs, String authType) {
+                }
+
+                @Override
+                public void checkServerTrusted(
+                        java.security.cert.X509Certificate[] certs, String authType) {
+                }
+            }
+        };
+
+        // Install the all-trusting trust manager
+        try {
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+        } catch (GeneralSecurityException ex) {
+            Variables.logger.Log(Methods.class, Variables.LogType.Error, "Error in trusting all certificates. Details:\r\n" + ex.getMessage());
+        }
     }
 
     /**
@@ -87,10 +135,11 @@ public class Methods {
 
     //<editor-fold defaultstate="collapsed" desc="Load and Store">
     //Load and Store
-    
     /**
      * This method converts human readable file size to bytes (1024).
-     * @param humanReadableFileSize The human readable file size (Ex. 500MB <b>without space between size and unit</b>)
+     *
+     * @param humanReadableFileSize The human readable file size (Ex. 500MB
+     * <b>without space between size and unit</b>)
      * @return the bytes of human readable size in long format.
      */
     public static long filesizeToBytes(String humanReadableFileSize) {
@@ -115,8 +164,10 @@ public class Methods {
 
     /**
      * This method will convert bytes to human readable size (Ex. 500MB).
+     *
      * @param bytes The number of bytes.
-     * @param si The base of conversion ({@code si = true} -> 1000 , {@code si = false} -> 1024)
+     * @param si The base of conversion ({@code si = true} -> 1000 ,
+     * {@code si = false} -> 1024)
      * @return The string format of human readable size (Ex. 500MB).
      */
     public static String filesizeToHumanReadable(long bytes, boolean si) {
@@ -140,9 +191,11 @@ public class Methods {
     public static synchronized long getFolderSize(String Directory) {
         return FileUtils.sizeOfDirectory(new File(Directory));
     }
-    
+
     /**
-     * This method will check if path has a separator at end. If not it will add.
+     * This method will check if path has a separator at end. If not it will
+     * add.
+     *
      * @param Directory The path of directory to be checked.
      * @return The path with separator at end.
      */
@@ -151,6 +204,49 @@ public class Methods {
             return Directory;
         } else {
             return Directory + java.io.File.separator;
+        }
+    }
+
+    /**
+     * This method will store the remaining links to the LOGS/Links.csv
+     */
+    public static void makeLinksLogs() {
+        try {
+            Variables.startMakeLogs.acquire();
+
+            File outputFile = new File(checkDirectory(Variables.outputDirectory) + "LOGS" + File.separator + "Links.csv");
+            
+            if (outputFile.getParentFile() != null) {
+                outputFile.getParentFile().mkdirs();
+            }
+
+            FileWriter out = new FileWriter(outputFile);
+            String tmp = "";
+
+            tmp = Variables.inputFileOutputFileName + "," + Variables.inputFileLinksColumnName + "\r\n";
+            out.write(tmp); //CSV Header
+
+            for (WebDocument doc : getRemainingProfileLinks()) {
+                doc.resetCounter();
+
+                tmp = doc.getOutputName() + ",";
+                String url = doc.getNextUrl();
+
+                while (url != null) {
+                    tmp += url + Variables.inputFileLinksSeparator;
+                    url = doc.getNextUrl();
+                }
+
+                //remove last separator
+                //TODO Check the sustring works fine or not.
+                //Error occured when all threads finished their work.
+                tmp = tmp.substring(0, tmp.lastIndexOf(Variables.inputFileLinksSeparator));
+                out.write(tmp + "\r\n");
+            }
+        } catch (InterruptedException ex) {
+            Variables.logger.Log(Methods.class, Variables.LogType.Error, "Can not accure semaphore for making logs. Details:\r\n" + ex.getMessage());
+        } catch (IOException ex) {
+            Variables.logger.Log(Methods.class, Variables.LogType.Error, "Can not open file for making logs. Details:\r\n" + ex.getMessage());
         }
     }
 //</editor-fold>
