@@ -22,7 +22,6 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.Vector;
-import java.util.concurrent.Semaphore;
 
 /**
  *
@@ -274,12 +273,12 @@ public class Microbot {
 
             //Fill the main Vector:
             /*List<WebDocument> dummyList = new ArrayList();
-            dummyList.addAll(dummySet);
+             dummyList.addAll(dummySet);
             
-            dummySet.clear();
+             dummySet.clear();
             
-            Collections.reverse(dummyList);
-            */
+             Collections.reverse(dummyList);
+             */
             Variables.links = new Vector<WebDocument>(dummySet);
 
             //Clear RAM:
@@ -304,9 +303,6 @@ public class Microbot {
                 Variables.logger.Log(Microbot.class, Variables.LogType.Info, "[+] Done reading user agents list.");
             }
 
-            // Semaphore
-            Variables.startMakeLogs = new Semaphore(Variables.threadCount);
-
             //Logger
             Variables.successLogsFile.mkdir(); //Create directories
             Variables.errorLogsFile.mkdir();
@@ -330,16 +326,11 @@ public class Microbot {
      * This method will handle when user presses {@code CTRL + C}
      */
     private static void setShutDownHook() {
-        final Thread MainThread = Thread.currentThread();
-
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
-                try {
-                    Variables.threadController.Stop();
-                    MainThread.join();
-                } catch (InterruptedException ex) {
-                    Variables.logger.Log(Microbot.class, Variables.LogType.Error, "Error while attaching shutdown hook. Details:\r\n" + ex.getMessage());
-                }
+                System.out.println("Cleaning up ...");
+                Variables.threadController.Stop();
+                Variables.threadController.changeActiveThreads(false, null, Variables.microbotState.CleanUp);
             }
         });
     }

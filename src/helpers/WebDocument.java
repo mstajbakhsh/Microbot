@@ -80,7 +80,7 @@ public class WebDocument {
      * {@link Methods#makeLinksLogs()}
      */
     public void resetCounter() {
-        Counter = 0;
+        Counter = -1;
     }
 
     /**

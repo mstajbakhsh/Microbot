@@ -211,16 +211,16 @@ public class Methods {
      * This method will store the remaining links to the LOGS/Links.csv
      */
     public static void makeLinksLogs() {
+        FileWriter out = null;
         try {
-            Variables.startMakeLogs.acquire();
-
-            File outputFile = new File(checkDirectory(Variables.outputDirectory) + "LOGS" + File.separator + "Links.csv");
+            File inputDirectory = new File (Variables.inputFile);
+            File outputFile = new File(checkDirectory(inputDirectory.getParent()) + File.separator + "Links.csv");
             
             if (outputFile.getParentFile() != null) {
                 outputFile.getParentFile().mkdirs();
             }
 
-            FileWriter out = new FileWriter(outputFile);
+            out = new FileWriter(outputFile);
             String tmp = "";
 
             tmp = Variables.inputFileOutputFileName + "," + Variables.inputFileLinksColumnName + "\r\n";
@@ -242,11 +242,13 @@ public class Methods {
                 //Error occured when all threads finished their work.
                 tmp = tmp.substring(0, tmp.lastIndexOf(Variables.inputFileLinksSeparator));
                 out.write(tmp + "\r\n");
+                out.flush();
             }
-        } catch (InterruptedException ex) {
-            Variables.logger.Log(Methods.class, Variables.LogType.Error, "Can not accure semaphore for making logs. Details:\r\n" + ex.getMessage());
+            
+            out.close();
+            
         } catch (IOException ex) {
-            Variables.logger.Log(Methods.class, Variables.LogType.Error, "Can not open file for making logs. Details:\r\n" + ex.getMessage());
+            Variables.logger.Log(Methods.class, Variables.LogType.Error, "Error in saving remaining links. Details:\r\n" + ex.getMessage());
         }
     }
 //</editor-fold>

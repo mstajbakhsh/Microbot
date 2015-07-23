@@ -9,7 +9,6 @@ import Fetcher.Controller;
 import java.io.File;
 import java.io.FileWriter;
 import java.util.Vector;
-import java.util.concurrent.Semaphore;
 
 /**
  *
@@ -45,7 +44,7 @@ public class Variables {
 
     public enum microbotState {
 
-        Fetching, Compressing, Initializing, Starting, Stopping, Finished, Dummy
+        Fetching, Compressing, Initializing, Starting, Stopping, Finished, CleanUp, Dummy
     }
     
     public static microbotState state = microbotState.Dummy;
@@ -76,7 +75,6 @@ public class Variables {
 
     //Store
     public static String outputDirectory = "./";
-    public static Semaphore startMakeLogs = null; // It will initialize in fillConfiguration.    
 
     //Compress
     public enum CompressType {
@@ -88,8 +86,6 @@ public class Variables {
     public static long outputSizeLimit = Methods.filesizeToBytes("500MB");
     public static boolean deleteAfterCompress = true;
     public static CompressType compressType = CompressType.ZIP;
-    
-    //public static Semaphore startCompress = null; // It will initialize in fillConfiguration.
 
     //</editor-fold>
     //<editor-fold defaultstate="expanded" desc="Logging">

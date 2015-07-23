@@ -31,7 +31,8 @@ public class Fetcher implements Runnable {
 
     private Thread t;
     private String name;
-
+    private boolean isWorking = false;
+    
     private CookieManager cookies = new CookieManager();
 
     /**
@@ -54,10 +55,11 @@ public class Fetcher implements Runnable {
     }
 
     public void startFetching() {
-        if (t != null && !t.isAlive()) {
+        if (t != null && !t.isAlive() && !isWorking) {
+            isWorking = true;
             t.start();
             if (Variables.debug) {
-                Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Fetcher (" + Methods.Colorize(name, Methods.Color.Blue) + ")");
+                Variables.logger.Log(Fetcher.class, Variables.LogType.Info, "Fetcher (" + Methods.Colorize(name, Methods.Color.Blue) + ")");
             }
         } else {
             Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Failed to start fetcher (" + Methods.Colorize(name, Methods.Color.Blue) + ")");
@@ -94,7 +96,7 @@ public class Fetcher implements Runnable {
         }
 
         link = Methods.getNextProfileLink();
-        while (link != null) {
+        while (link != null && isWorking) {
             //Start fetching ...
 
             String URL = link.getNextUrl();
@@ -213,16 +215,19 @@ public class Fetcher implements Runnable {
             long size = Methods.getFolderSize(Variables.outputDirectory);
             if (size >= Variables.outputSizeLimit) {
                 //Deactivate itself by waiting ...
-                Variables.threadController.changeActiveThreads(false, t);
+                Variables.state = Variables.microbotState.Compressing;
+                Variables.threadController.changeActiveThreads(false, t, Variables.microbotState.Compressing);
             }
 
             //Check if user terminated program or not
-            if (Variables.state == Variables.microbotState.Stopping) { //Signal the semaphore for handling remaining lists
-                Variables.startMakeLogs.release();
-            } else if (Variables.state == Variables.microbotState.Fetching || Variables.state == Variables.microbotState.Compressing) {
+            if (isWorking) {
                 link = Methods.getNextProfileLink();
             }
         }
+        
+        //Thread finished. (Normally or by force)
+        Variables.state = Variables.microbotState.Stopping;
+        Variables.threadController.changeActiveThreads(false, t, Variables.microbotState.Stopping);
 
         //URLs done. This thread finishes its work.
         if (Variables.debug) {
@@ -251,6 +256,13 @@ public class Fetcher implements Runnable {
                 cookies.getCookieStore().add(null, HttpCookie.parse(cookie).get(0));
             }
         }
+    }
+    
+    /**
+     * This method will ask the thread to destroy itself
+     */
+    public void Stop() {
+        isWorking = false;
     }
 
     /**
