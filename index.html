@@ -1,0 +1,167 @@
+<!doctype html>
+<!-- The Time Machine GitHub pages theme was designed and developed by Jon Rohan, on Feb 7, 2012. -->
+<!-- Follow him for fun. http://twitter.com/jonrohan. Tail his code on https://github.com/jonrohan -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+
+  <link rel="stylesheet" href="stylesheets/stylesheet.css" media="screen">
+  <link rel="stylesheet" href="stylesheets/github-dark.css">
+  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+  <script type="text/javascript" src="javascripts/script.js"></script>
+
+  <title>Microbot</title>
+  <meta name="description" content="A simple JAVA bot to grab web resources with lots of configuration (anonimity, user agent, wait before requests, auto compression, and etc). Mainly useful when you want to grab information from a web site.">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <header>
+      <h1 class="title">Microbot</h1>
+    </header>
+    <div id="container">
+      <p class="tagline">A simple JAVA bot to grab web resources with lots of configuration (anonimity, user agent, wait before requests, auto compression, and etc). Mainly useful when you want to grab information from a web site.</p>
+      <div id="main" role="main">
+        <div class="download-bar">
+        <div class="inner">
+          <a href="https://github.com/mstajbakhsh/Microbot/tarball/master" class="download-button tar"><span>Download</span></a>
+          <a href="https://github.com/mstajbakhsh/Microbot/zipball/master" class="download-button zip"><span>Download</span></a>
+          <a href="https://github.com/mstajbakhsh/Microbot" class="code">View Microbot on GitHub</a>
+        </div>
+        <span class="blc"></span><span class="trc"></span>
+        </div>
+        <article class="markdown-body">
+          <h1>
+<a id="microbot-micro--robot" class="anchor" href="#microbot-micro--robot" aria-hidden="true"><span class="octicon octicon-link"></span></a>Microbot (Micro + robot)</h1>
+
+<p>A simple <strong>JAVA</strong> bot to grab web resources with lots of configuration (anonimity, user agent, wait before requests, auto compression, and etc). Mainly useful when you want to grab information from a web site. <strong>IT IS NOT A CRAWLER</strong>, it is just a bot. You should feed the bot with links (URLs) and it will fetch and store them.</p>
+
+<h2>
+<a id="abilities" class="anchor" href="#abilities" aria-hidden="true"><span class="octicon octicon-link"></span></a>Abilities</h2>
+
+<p>The Microbot uses a configuration file which can configure following abilities:</p>
+
+<ul>
+<li>Fetching multi links: It will handle cookies and referer for multi requests.</li>
+<li>User Agents (UA): it will select random UA which the UA list is given by the user.</li>
+<li>Using proxy: mainly SOCKS for networks such as TOR.</li>
+<li>Resume: If user terminates the program, it will store the remaining links in a file named <strong>Links.csv</strong>
+</li>
+<li>Auto compressor: Specify limit for output folder, after threshold reached, it will automatically compress the files into a compressed file.</li>
+<li>Logs: It will store logs, so the user can handle errors (Ex: http response code is 4xx or 5xx or etc.)</li>
+</ul>
+
+<h2>
+<a id="files-and-formats" class="anchor" href="#files-and-formats" aria-hidden="true"><span class="octicon octicon-link"></span></a>Files and formats</h2>
+
+<p>In the following, a tutorial is described to show the configuration. You may find sample user Agents and sample configuration file in <strong>sample Files</strong> directory</p>
+
+<p>There are several topics configurations:</p>
+
+<ul>
+<li>Anonymizer</li>
+<li>Web Requests</li>
+<li>Load and Store</li>
+<li>Logging</li>
+</ul>
+
+<p>The format for description:
+NAME: {AVAILABLE OPTIONS} ~ Description</p>
+
+<h3>
+<a id="anonymizer" class="anchor" href="#anonymizer" aria-hidden="true"><span class="octicon octicon-link"></span></a>Anonymizer</h3>
+
+<p>There are four variables in anonymizer section:</p>
+
+<ul>
+<li><p>Anonymizer: {TOR, I2P} ~ The type of anonymizer network if used. The configuration is useful if you used proxy along it.</p></li>
+<li><p>AnonymizerProxyType: {SOCKS, DIRECT, HTTP, NONE} ~ The type of proxy. If you want to use it directly, use NONE proxy. Mostly TOR will use SOCKS proxy.</p></li>
+<li><p>AnonymizerIP: {ANY valid IPv4} ~ The IP address of the proxy. TOR uses LOCALHOST (127.0.0.1) in most of the cases.</p></li>
+<li><p>AnonymizerPort: {ANY valid port} ~ The port number of the proxy. TOR uses 9050 or 9150 in most of the cases.</p></li>
+</ul>
+
+<p>CAUTION: Microbot just uses anonymizer network as proxy. You may use other tools or scripts to force TOR or any other anonymizer network to change the IP of the request. (Ex: a script to send HUP signal to TOR process each 100 seconds).</p>
+
+<h3>
+<a id="web-requests" class="anchor" href="#web-requests" aria-hidden="true"><span class="octicon octicon-link"></span></a>Web Requests</h3>
+
+<p>The variables in web requests are as follows:</p>
+
+<ul>
+<li><p>AcceptSelfSignedCertificates: {true, false} ~ If true, Microbot will accept invalid or self signed certificates (http<strong>s</strong>).</p></li>
+<li><p>ThreadCount: {ANY positive integer -&gt; 1, 2, 3, ...} ~ The number of threads for speedup fetching.</p></li>
+<li><p>MinSleep: {ANY positive integer -&gt; 1, 2, 3, ...} ~ The minimum amount of time (in seconds) that each thread will wait after request a new resource.</p></li>
+<li><p>MaxSleep: {ANY positive integer larger than MinSleep -&gt; 1, 2, 3, ...} ~ The maximum amount of time (in seconds) that each thread will wait after request a new resource.</p></li>
+<li><p>UserAgentListFile: {Valid text file path} ~ The file has simple format. Each link is in a new line. For compatibilit the new line should use WINDOWS format new line (<code>\r\n</code>). There is a file named UA.txt that has list of UAs. You may use your UA list.</p></li>
+<li><p>RandomUserAgent: {true, false} ~ If true, it will use a random user agent from UserAgentListFile, if false, it will use the first UA (line) in UserAgentListFile.</p></li>
+<li><p>Cookie: {Any valid String in cookie format} ~ If you want to use a fixed cookie for all the requests, fill this parameter. Actually this field may not be used in most of the cases. You can leave it blank.</p></li>
+</ul>
+
+<h3>
+<a id="load-and-store" class="anchor" href="#load-and-store" aria-hidden="true"><span class="octicon octicon-link"></span></a>Load and Store</h3>
+
+<p>The variables involved in loading and storing are as follows:</p>
+
+<ul>
+<li>InputFile: {Valid text file path in CSV format} ~ The input file which consists two main information: Name of output file, URL. Following is a sample format</li>
+</ul>
+
+<p><code>NAME,URL</code></p>
+
+<p><code>page1.html,http://foo.bar/page1.php</code></p>
+
+<p><code>page2.html,http://foo.bar/page2.php~~~http://foo.bar/page2.php?id=Hello~~~http://foo.bar/page2.php?id=World</code></p>
+
+<p><code>page3.html,http://foo.bar/page3.php</code></p>
+
+<p><code>page4.html,http://foo.bar/page4.php</code></p>
+
+<p>Page 1, 3, 4 are simple examples. Page 2 is referer based example which links are separated using ~~~ or any valid user defined separator.</p>
+
+<ul>
+<li><p>MainURLColumnName: {URL COLUMN Name in InputFile} ~ In the above sample there are two columns: NAME and URL. URL is the MainURLColumnName.</p></li>
+<li><p>OutputFileColumnName: {Output file name column in InputFile} ~ In the above sample there are two columns: NAME and URL. NAME is the OutputFileColumnName.</p></li>
+<li><p>LinksSeparator: {ANY valid string character sequence} ~ In the above sample (second line) uses ~~~ as the separator for referer based requests.</p></li>
+<li><p>OutputDirectory: {ANY valid folder path which user has permission for writing in it} ~ All the HTML output will be stored here with the name indicated in OutputFileColumnName.</p></li>
+<li><p>OutputLimit: {B, KB, MG, GB, TB} ~ The threshold when Microbot should start to compress retrieved documents. (Ex: 2MB or 300MB)</p></li>
+<li><p>DeleteAfterCompress: {true, false} ~ Indicates if Microbot should delete retrieved files after successfully compress them.</p></li>
+<li><p>CompressorType: {ZIP, TAR, RAR, GZIP} ~ The type of output archive. Currently only ZIP format is implemented. Other options will cause an exception.</p></li>
+</ul>
+
+<h3>
+<a id="logging" class="anchor" href="#logging" aria-hidden="true"><span class="octicon octicon-link"></span></a>Logging</h3>
+
+<p>The logging parameters are very simple.</p>
+
+<ul>
+<li><p>Debug: {true, false} ~ Will print debug information in standard system output.</p></li>
+<li><p>VeryVerbos: {true, false} ~ Will print debug information in very verbose mode. Debug mode should be enabled. </p></li>
+</ul>
+        </article>
+      </div>
+    </div>
+    <footer>
+      <div class="owner">
+      <p><a href="https://github.com/mstajbakhsh" class="avatar"><img src="https://avatars0.githubusercontent.com/u/5307746?v=3&amp;s=60" width="48" height="48"></a> <a href="https://github.com/mstajbakhsh">mstajbakhsh</a> maintains <a href="https://github.com/mstajbakhsh/Microbot">Microbot</a></p>
+
+
+      </div>
+      <div class="creds">
+        <small>This page generated using <a href="https://pages.github.com/">GitHub Pages</a><br>theme by <a href="https://twitter.com/jonrohan/">Jon Rohan</a></small>
+      </div>
+    </footer>
+  </div>
+  <div class="current-section">
+    <a href="#top">Scroll to top</a>
+    <a href="https://github.com/mstajbakhsh/Microbot/tarball/master" class="tar">tar</a><a href="https://github.com/mstajbakhsh/Microbot/zipball/master" class="zip">zip</a><a href="" class="code">source code</a>
+    <p class="name"></p>
+  </div>
+
+  
+</body>
+</html>
