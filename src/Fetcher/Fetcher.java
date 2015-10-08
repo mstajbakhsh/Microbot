@@ -32,7 +32,7 @@ public class Fetcher implements Runnable {
     private Thread t;
     private String name;
     private boolean isWorking = false;
-    
+
     private CookieManager cookies = new CookieManager();
 
     /**
@@ -157,14 +157,13 @@ public class Fetcher implements Runnable {
 
                         //get content
                         String html = "";
-                        try {
+
                         if (connection.getContentEncoding().equalsIgnoreCase("gzip")) {
                             html = IOUtils.toString(new GZIPInputStream(connection.getInputStream()));
                         } else if (connection.getContentEncoding().equalsIgnoreCase("deflate")) {
                             html = IOUtils.toString(new InflaterInputStream(connection.getInputStream()));
-                        }} catch (Exception ex) {
-                            int kkk = 0;
                         }
+                        
                         FileWriter fw = new FileWriter(outputName);
                         fw.write(html);
                         fw.flush();
@@ -226,7 +225,7 @@ public class Fetcher implements Runnable {
                 link = Methods.getNextProfileLink();
             }
         }
-        
+
         //Thread finished. (Normally or by force)
         Variables.state = Variables.microbotState.Stopping;
         Variables.threadController.changeActiveThreads(false, t, Variables.microbotState.Stopping);
@@ -259,7 +258,7 @@ public class Fetcher implements Runnable {
             }
         }
     }
-    
+
     /**
      * This method will ask the thread to destroy itself
      */
