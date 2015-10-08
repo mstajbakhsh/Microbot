@@ -262,6 +262,23 @@ public class Microbot {
                     }
                     line = br.readLine();
                 }
+
+                //Fill the main Vector:
+                /*
+                List<WebDocument> dummyList = new ArrayList();
+                 dummyList.addAll(dummySet);
+            
+                 dummySet.clear();
+            
+                 Collections.reverse(dummyList);
+                 */
+                Variables.links = new Vector<WebDocument>(dummySet);
+
+                //Clear RAM:
+                dummySet.clear();
+                dummySet = null;
+                System.gc();
+
                 if (Variables.links.isEmpty()) {
                     Variables.logger.Log(Microbot.class, Variables.LogType.Warning, "No web document added. Please check CSV file structure and check if the output file names ends with " + Methods.Colorize("html or htm", Methods.Color.Cyan) + ".");
                 }
@@ -270,21 +287,6 @@ public class Microbot {
                     Variables.logger.Log(Microbot.class, Variables.LogType.Info, "[+] Done reading input file (profiles)");
                 }
             }
-
-            //Fill the main Vector:
-            /*List<WebDocument> dummyList = new ArrayList();
-             dummyList.addAll(dummySet);
-            
-             dummySet.clear();
-            
-             Collections.reverse(dummyList);
-             */
-            Variables.links = new Vector<WebDocument>(dummySet);
-
-            //Clear RAM:
-            dummySet.clear();
-            dummySet = null;
-            System.gc();
 
             //Read UAs:
             if (Variables.debug) {

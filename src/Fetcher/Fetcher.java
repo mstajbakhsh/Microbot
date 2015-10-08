@@ -157,12 +157,14 @@ public class Fetcher implements Runnable {
 
                         //get content
                         String html = "";
+                        try {
                         if (connection.getContentEncoding().equalsIgnoreCase("gzip")) {
                             html = IOUtils.toString(new GZIPInputStream(connection.getInputStream()));
                         } else if (connection.getContentEncoding().equalsIgnoreCase("deflate")) {
                             html = IOUtils.toString(new InflaterInputStream(connection.getInputStream()));
+                        }} catch (Exception ex) {
+                            int kkk = 0;
                         }
-
                         FileWriter fw = new FileWriter(outputName);
                         fw.write(html);
                         fw.flush();
