@@ -209,6 +209,14 @@ public class Fetcher implements Runnable {
                             Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Error in fetching [" + Methods.Colorize(URL, Methods.Color.Red) + "]");
                         }
                     }
+                } catch (NullPointerException ex) { //Thrown sometimes and make the thread as Dead!
+                    if (Variables.debug) {
+                        if (Variables.vv) {
+                            Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Null pointer occured. Error in fetching [" + Methods.Colorize(URL, Methods.Color.Red) + "] in fetcher (" + Methods.Colorize(name, Methods.Color.Yellow) + ") for writing in (" + Methods.Colorize(link.getOutputName(), Methods.Color.White) + ").");
+                        } else {
+                            Variables.logger.Log(Fetcher.class, Variables.LogType.Error, "Null pointer occured. Error in fetching [" + Methods.Colorize(URL, Methods.Color.Red) + "]");
+                        }
+                    }
                 }
             }
 
